@@ -1,14 +1,13 @@
 /**
  * POST /api/generate-pdf
+ *
+ * Uses Browserless.io hosted Chrome to generate PDFs.
+ * No Puppeteer binary, no cold start timeout.
+ *
+ * Sign up at browserless.io, add BROWSERLESS_TOKEN to Vercel env vars.
  */
 
-import puppeteer from 'puppeteer-core';
-import chromium from '@sparticuz/chromium';
-
-export const config = {
-    maxDuration: 60,
-    memory: 3008,
-};
+export const config = { maxDuration: 30 };
 
 interface PageData {
     headerHtml: string;
@@ -39,6 +38,13 @@ export default async function handler(req: Request): Promise<Response> {
         return new Response('Method not allowed', { status: 405 });
     }
 
+    const token = process.env.BROWSERLESS_TOKEN;
+    if (!token) {
+        return new Response('BROWSERLESS_TOKEN not configured', {
+            status: 500, headers: corsHeaders
+        });
+    }
+
     let body: GeneratePDFRequest;
     try {
         body = await req.json();
@@ -54,35 +60,41 @@ export default async function handler(req: Request): Promise<Response> {
 
     const html = buildHtml(pages, pageSize);
 
-    let browser;
     try {
-        browser = await puppeteer.launch({
-            args: chromium.args,
-            executablePath: await chromium.executablePath(),
-            headless: true, // fixed: don't use chromium.headless
-        });
+        // Call Browserless REST API — hosted Chrome, no cold start
+        const browserlessRes = await fetch(
+            `https://production-sfo.browserless.io/pdf?token=${token}`,
+            {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Cache-Control': 'no-cache',
+                },
+                body: JSON.stringify({
+                    html,
+                    options: {
+                        format: pageSize,
+                        printBackground: true,
+                        margin: {
+                            top:    `${marginTop}mm`,
+                            bottom: `${marginBottom}mm`,
+                            left:   `${marginLeft}mm`,
+                            right:  `${marginRight}mm`,
+                        },
+                    },
+                }),
+            }
+        );
 
-        const page = await browser.newPage();
+        if (!browserlessRes.ok) {
+            const error = await browserlessRes.text();
+            console.error('Browserless error:', error);
+            return new Response(`PDF generation failed: ${error}`, {
+                status: 500, headers: corsHeaders
+            });
+        }
 
-        // fixed: 'networkidle0' removed in newer Puppeteer — use 'load'
-        await page.setContent(html, { waitUntil: 'load' });
-
-        // Extra wait for Google Fonts to finish rendering
-        await new Promise(resolve => setTimeout(resolve, 1500));
-
-        const pdfUint8Array = await page.pdf({
-            format: pageSize === 'Letter' ? 'Letter' : 'A4',
-            printBackground: true,
-            margin: {
-                top:    `${marginTop}mm`,
-                bottom: `${marginBottom}mm`,
-                left:   `${marginLeft}mm`,
-                right:  `${marginRight}mm`,
-            },
-        });
-
-        // fixed: convert Uint8Array to Buffer so Response accepts it
-        const pdfBuffer = Buffer.from(pdfUint8Array);
+        const pdfBuffer = await browserlessRes.arrayBuffer();
 
         return new Response(pdfBuffer, {
             status: 200,
@@ -96,11 +108,8 @@ export default async function handler(req: Request): Promise<Response> {
     } catch (err) {
         console.error('PDF generation error:', err);
         return new Response(`PDF generation failed: ${String(err)}`, {
-            status: 500,
-            headers: corsHeaders,
+            status: 500, headers: corsHeaders,
         });
-    } finally {
-        if (browser) await browser.close();
     }
 }
 
