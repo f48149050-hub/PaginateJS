@@ -1,10 +1,6 @@
 /**
  * POST /api/generate-pdf
- *
- * Uses Browserless.io hosted Chrome to generate PDFs.
- * No Puppeteer binary, no cold start timeout.
- *
- * Sign up at browserless.io, add BROWSERLESS_TOKEN to Vercel env vars.
+ * Uses Browserless.io hosted Chrome — no cold start, no timeout.
  */
 
 export const config = { maxDuration: 30 };
@@ -23,21 +19,14 @@ interface GeneratePDFRequest {
     marginRight: number;
 }
 
-export default async function handler(req: Request): Promise<Response> {
-    const corsHeaders = {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
-    };
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type',
+};
 
-    if (req.method === 'OPTIONS') {
-        return new Response(null, { status: 204, headers: corsHeaders });
-    }
-
-    if (req.method !== 'POST') {
-        return new Response('Method not allowed', { status: 405 });
-    }
-
+// Named export — this is what Vercel expects for Web fetch-style functions
+export async function POST(req: Request): Promise<Response> {
     const token = process.env.BROWSERLESS_TOKEN;
     if (!token) {
         return new Response('BROWSERLESS_TOKEN not configured', {
@@ -49,19 +38,18 @@ export default async function handler(req: Request): Promise<Response> {
     try {
         body = await req.json();
     } catch {
-        return new Response('Invalid JSON body', { status: 400 });
+        return new Response('Invalid JSON body', { status: 400, headers: corsHeaders });
     }
 
     const { pages, pageSize, marginTop, marginBottom, marginLeft, marginRight } = body;
 
     if (!pages?.length) {
-        return new Response('No pages provided', { status: 400 });
+        return new Response('No pages provided', { status: 400, headers: corsHeaders });
     }
 
     const html = buildHtml(pages, pageSize);
 
     try {
-        // Call Browserless REST API — hosted Chrome, no cold start
         const browserlessRes = await fetch(
             `https://production-sfo.browserless.io/pdf?token=${token}`,
             {
@@ -113,6 +101,11 @@ export default async function handler(req: Request): Promise<Response> {
     }
 }
 
+// Handle preflight
+export async function OPTIONS(): Promise<Response> {
+    return new Response(null, { status: 204, headers: corsHeaders });
+}
+
 function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
     const pagesHtml = pages
         .map(page => `
@@ -147,8 +140,6 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
     @page { size: ${pageSize}; }
   </style>
 </head>
-<body>
-  ${pagesHtml}
-</body>
+<body>${pagesHtml}</body>
 </html>`;
 }
