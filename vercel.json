@@ -5,6 +5,12 @@
     },
     "api/stripe-webhook.ts": {
       "maxDuration": 30
+    },
+  "functions": {
+    "api/generate-pdf.ts": {
+      "maxDuration": 60,
+      "memory": 3008
     }
   }
 }
+  }

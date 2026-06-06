@@ -5,7 +5,10 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
-export const config = { maxDuration: 60 };
+export const config = {
+    maxDuration: 60,
+    memory: 3008,
+};
 
 interface PageData {
     headerHtml: string;
