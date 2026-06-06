@@ -1,7 +1,7 @@
 import React from 'react';
 
 // ─── Replace these placeholders before going live ────────────────────────────
-const STRIPE_PRO_LINK  = 'buy.stripe.com/https://buy.stripe.com/4gM5kDgwo1vu3Wh4BzaMU00';
+const STRIPE_PRO_LINK  = 'https://buy.stripe.com/4gM5kDgwo1vu3Wh4BzaMU00';
 const GITHUB_FREE_LINK = 'https://github.com/f48149050-hub/PaginateJS';
 const ENTERPRISE_EMAIL = 'mailto:YOUR_EMAIL?subject=PaginateJS%20Enterprise';
 
