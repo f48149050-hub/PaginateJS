@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pagination Engine - Manual Verification</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .header {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .header h1 {
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    .header p {
+      color: #666;
+      font-size: 14px;
+      margin-bottom: 15px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .controls label {
+      font-weight: 500;
+      color: #333;
+    }
+
+    .controls select,
+    .controls button {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      cursor: pointer;
+      background: white;
+    }
+
+    .controls button {
+      background: #0066cc;
+      color: white;
+      border-color: #0066cc;
+      font-weight: 500;
+    }
+
+    .controls button:hover {
+      background: #0052a3;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 1200px) {
+      .content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 15px;
+      border-bottom: 1px solid #eee;
+      background: #fafafa;
+      font-weight: 600;
+      color: #333;
+    }
+
+    .panel-body {
+      padding: 15px;
+      overflow-y: auto;
+      flex: 1;
+      max-height: 600px;
+    }
+
+    .invoice {
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .invoice-header {
+      margin-bottom: 20px;
+      border-bottom: 2px solid #333;
+      padding-bottom: 15px;
+    }
+
+    .invoice-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .invoice-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      font-size: 12px;
+      color: #666;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+
+    thead {
+      background: #f5f5f5;
+      font-weight: 600;
+      border-top: 1px solid #ddd;
+      border-bottom: 2px solid #ddd;
+    }
+
+    th {
+      padding: 10px;
+      text-align: left;
+      font-size: 12px;
+      color: #333;
+    }
+
+    td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .page-break {
+      border-top: 3px dashed #ff6b6b;
+      margin: 20px 0;
+      padding-top: 15px;
+      background: linear-gradient(180deg, rgba(255, 107, 107, 0.05) 0%, transparent 100%);
+    }
+
+    .page-label {
+      font-weight: bold;
+      color: #ff6b6b;
+      font-size: 12px;
+      margin-bottom: 8px;
+    }
+
+    .keep-together-block {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+
+    .keep-together-block h3 {
+      font-size: 12px;
+      margin-bottom: 5px;
+      color: #856404;
+    }
+
+    .signature-block {
+      background: #e7f3ff;
+      border: 1px solid #0066cc;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 4px;
+      min-height: 60px;
+    }
+
+    .signature-block h3 {
+      font-size: 12px;
+      margin-bottom: 5px;
+      color: #004085;
+    }
+
+    .results {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .result-section {
+      border: 1px solid #eee;
+      border-radius: 4px;
+      padding: 12px;
+      background: #fafafa;
+    }
+
+    .result-section h3 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .result-section h3 .badge {
+      display: inline-block;
+      background: #0066cc;
+      color: white;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .result-section p {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 6px;
+    }
+
+    .result-section.warning {
+      background: #fff3cd;
+      border-color: #ffc107;
+    }
+
+    .result-section.warning .badge {
+      background: #ff6b6b;
+    }
+
+    .result-section.success {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+
+    .result-section.success h3 {
+      color: #155724;
+    }
+
+    .result-section.success .badge {
+      background: #28a745;
+    }
+
+    .loading {
+      text-align: center;
+      color: #999;
+      font-style: italic;
+      padding: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📄 Pagination Engine - Manual Verification</h1>
+      <p>
+        Visual verification of pagination algorithm. This demo shows how the
+        pagination engine splits invoices across pages while respecting
+        keep-together blocks and repeating headers.
+      </p>
+
+      <div class="controls">
+        <label for="rowCount">Invoice rows:</label>
+        <select id="rowCount">
+          <option value="10">10 rows</option>
+          <option value="25" selected>25 rows</option>
+          <option value="50">50 rows</option>
+          <option value="100">100 rows</option>
+        </select>
+
+        <label for="pageSize" style="margin-left: 20px">Page size:</label>
+        <select id="pageSize">
+          <option value="A4" selected>A4</option>
+          <option value="Letter">Letter</option>
+        </select>
+
+        <button onclick="refreshDemo()" style="margin-left: 20px">
+          ↻ Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Left: Rendered Invoice -->
+      <div class="panel">
+        <div class="panel-header">Rendered Invoice (with page breaks)</div>
+        <div class="panel-body" id="invoicePanel">
+          <div class="loading">Loading invoice...</div>
+        </div>
+      </div>
+
+      <!-- Right: Pagination Results -->
+      <div class="panel">
+        <div class="panel-header">Pagination Analysis</div>
+        <div class="panel-body">
+          <div class="results" id="resultsPanel">
+            <div class="loading">Analyzing pagination...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { paginate } from '../engine/pagination';
+    import { analyzeDom } from '../engine/domAnalyzer';
+    import { PAGE_SIZES } from '../engine/types';
+
+
+
+    function generateInvoice(rowCount) {
+      const container = document.createElement('div');
+      container.className = 'invoice';
+
+      const header = document.createElement('div');
+      header.className = 'invoice-header';
+      header.setAttribute('data-repeat-header', 'true');
+      header.innerHTML = `
+        <div class="invoice-title">INVOICE</div>
+        <div class="invoice-meta">
+          <div>
+            <strong>Invoice #:</strong> INV-2024-001<br>
+            <strong>Date:</strong> June 3, 2024<br>
+            <strong>Due:</strong> June 17, 2024
+          </div>
+          <div>
+            <strong>From:</strong> Acme Corp<br>
+            <strong>To:</strong> Client Name<br>
+            <strong>Contact:</strong> client@example.com
+          </div>
+        </div>
+      `;
+      container.appendChild(header);
+
+      // Render rows as direct children so the pagination engine can measure each row
+      for (let i = 1; i <= rowCount; i++) {
+        const row = document.createElement('div');
+        row.className = 'invoice-row';
+        row.style.display = 'flex';
+        row.style.justifyContent = 'space-between';
+        row.style.padding = '8px 10px';
+        row.style.borderBottom = '1px solid #eee';
+
+        const unitPrice = 100 + Math.random() * 500;
+        const qty = Math.floor(Math.random() * 10) + 1;
+        const amount = unitPrice * qty;
+
+        row.innerHTML = `
+          <div style="width:40%">Product Item #${i.toString().padStart(3, '0')}</div>
+          <div style="width:15%">${qty}</div>
+          <div style="width:15%">$${unitPrice.toFixed(2)}</div>
+          <div style="width:15%">$${amount.toFixed(2)}</div>
+        `;
+
+        container.appendChild(row);
+      }
+
+      const totals = document.createElement('div');
+      totals.className = 'keep-together-block';
+      totals.setAttribute('data-keep-together', 'true');
+      totals.innerHTML = `
+        <h3>Totals Section</h3>
+        <div>
+          Subtotal: $25,000.00<br>
+          Tax (10%): $2,500.00<br>
+          <strong>Total Due: $27,500.00</strong>
+        </div>
+      `;
+      container.appendChild(totals);
+
+      const signature = document.createElement('div');
+      signature.className = 'signature-block';
+      signature.setAttribute('data-keep-together', 'true');
+      signature.innerHTML = `
+        <h3>Authorized by:</h3>
+        <div>
+          ___________________________<br>
+          Authorized Signature & Date
+        </div>
+      `;
+      container.appendChild(signature);
+
+      return container;
+    }
+
+    function renderInvoiceWithPageBreaks(container, result, blockIdToElement) {
+      // Insert visible page break markers into the live container using engine page plan
+      // Remove existing page-break markers first
+      const existing = container.querySelectorAll('.page-break');
+      existing.forEach(e => e.remove());
+
+      // blockIdToElement is a Map built from analyzeDom output
+      // It maps opaque blockId -> HTMLElement, so DOM order changes don't affect lookups
+      for (const page of result.pages) {
+        if (page.pageNumber === 1) continue;
+        // Find first non-header block on this page
+        const firstBlock = page.blocks.find(b => !b.isRepeatHeaderCopy);
+        if (!firstBlock) continue;
+        const target = blockIdToElement.get(firstBlock.blockId);
+        if (target) {
+          const breakDiv = document.createElement('div');
+          breakDiv.className = 'page-break';
+          breakDiv.innerHTML = `<div class="page-label">--- PAGE ${page.pageNumber} ---</div>`;
+          target.parentNode.insertBefore(breakDiv, target);
+        }
+      }
+
+      return container;
+    }
+
+    function refreshDemo() {
+      const rowCount = parseInt(document.getElementById('rowCount').value);
+      const pageSize = document.getElementById('pageSize').value;
+
+      // Render invoice into DOM so engine can measure real heights
+      const invoicePanel = document.getElementById('invoicePanel');
+      invoicePanel.innerHTML = '';
+      const currentInvoice = generateInvoice(rowCount);
+      invoicePanel.appendChild(currentInvoice);
+
+      try {
+        const paginationResult = paginate(currentInvoice, {
+          pageSize: pageSize,
+          marginTop: 10,
+          marginBottom: 10,
+          marginLeft: 10,
+          marginRight: 10
+        });
+
+        // Analyze DOM to get blockId -> element mapping
+        const blocks = analyzeDom(currentInvoice, {
+          pageSize: PAGE_SIZES[pageSize],
+          marginTop: 10,
+          marginBottom: 10
+        });
+
+        // Build Map<blockId, element> so we can look up elements by opaque blockId
+        // This allows blockId format to change without breaking the demo
+        const blockIdToElement = new Map();
+        for (const block of blocks) {
+          blockIdToElement.set(block.blockId, block.element);
+        }
+
+        // Insert page breaks based on engine result (using blockId mapping, not numeric parsing)
+        renderInvoiceWithPageBreaks(currentInvoice, paginationResult, blockIdToElement);
+
+        // Show diagnostics: measured blocks and pagination plan
+        let diagnosticsHtml = '';
+        diagnosticsHtml += `<div class="result-section"><h3>Measured Blocks</h3>`;
+        diagnosticsHtml += `<p>Count: ${blocks.length}</p><ul>`;
+        for (const b of blocks) {
+          diagnosticsHtml += `<li>${b.blockId}: height=${b.height.toFixed(0)}px top=${b.offset.toFixed(0)}px keepTogether=${b.isKeepTogether} repeatHeader=${b.isRepeatHeader}</li>`;
+        }
+        diagnosticsHtml += `</ul></div>`;
+
+        diagnosticsHtml += `<div class="result-section"><h3>Pagination Plan</h3>`;
+        for (const page of paginationResult.pages) {
+          diagnosticsHtml += `<div><strong>Page ${page.pageNumber}</strong><ul>`;
+          for (const blk of page.blocks) {
+            diagnosticsHtml += `<li>${blk.blockId}${blk.isRepeatHeaderCopy ? ' (header copy)' : ''}</li>`;
+          }
+          diagnosticsHtml += `</ul></div>`;
+        }
+        diagnosticsHtml += `</div>`;
+
+        document.getElementById('resultsPanel').innerHTML = diagnosticsHtml;
+      } catch (error) {
+        document.getElementById('invoicePanel').innerHTML = `<div class="loading">Error: ${error.message}</div>`;
+        document.getElementById('resultsPanel').innerHTML = `<div class="result-section warning"><h3>Error</h3><p>${error.message}</p></div>`;
+      }
+    }
+
+    document.getElementById('rowCount').addEventListener('change', refreshDemo);
+    document.getElementById('pageSize').addEventListener('change', refreshDemo);
+    refreshDemo();
+  </script>
+</body>
+</html>
