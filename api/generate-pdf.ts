@@ -1,17 +1,10 @@
 /**
  * POST /api/generate-pdf
- *
- * Receives page-by-page HTML from the client (already split by the
- * pagination engine), renders it in headless Chromium, and returns
- * a real PDF where the browser preview and output are identical.
- *
- * npm install puppeteer-core @sparticuz/chromium
  */
 
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
 
-// Give Chromium enough time to start and render fonts
 export const config = { maxDuration: 60 };
 
 interface PageData {
@@ -62,17 +55,19 @@ export default async function handler(req: Request): Promise<Response> {
     try {
         browser = await puppeteer.launch({
             args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
             executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+            headless: true, // fixed: don't use chromium.headless
         });
 
         const page = await browser.newPage();
 
-        // Wait for network idle so Google Fonts load correctly
-        await page.setContent(html, { waitUntil: 'networkidle0' });
+        // fixed: 'networkidle0' removed in newer Puppeteer — use 'load'
+        await page.setContent(html, { waitUntil: 'load' });
 
-        const pdf = await page.pdf({
+        // Extra wait for Google Fonts to finish rendering
+        await new Promise(resolve => setTimeout(resolve, 1500));
+
+        const pdfUint8Array = await page.pdf({
             format: pageSize === 'Letter' ? 'Letter' : 'A4',
             printBackground: true,
             margin: {
@@ -83,7 +78,10 @@ export default async function handler(req: Request): Promise<Response> {
             },
         });
 
-        return new Response(pdf, {
+        // fixed: convert Uint8Array to Buffer so Response accepts it
+        const pdfBuffer = Buffer.from(pdfUint8Array);
+
+        return new Response(pdfBuffer, {
             status: 200,
             headers: {
                 ...corsHeaders,
@@ -105,13 +103,11 @@ export default async function handler(req: Request): Promise<Response> {
 
 function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
     const pagesHtml = pages
-        .map(
-            (page) => `
+        .map(page => `
       <div class="pdf-page">
         ${page.headerHtml}
         ${page.contentHtml}
-      </div>`
-        )
+      </div>`)
         .join('');
 
     return `<!DOCTYPE html>
@@ -122,7 +118,6 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     body {
       font-family: 'DM Sans', sans-serif;
       font-size: 11px;
@@ -132,41 +127,12 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-
-    /* Each page is a block — Puppeteer breaks between them */
-    .pdf-page {
-      page-break-after: always;
-      background: white;
-    }
-    .pdf-page:last-child {
-      page-break-after: auto;
-    }
-
-    /* Hide the annotation badges — they're for the preview only */
+    .pdf-page { page-break-after: always; background: white; }
+    .pdf-page:last-child { page-break-after: auto; }
     [data-header-badge],
     .engine-page-break-line,
-    .engine-header-copy {
-      display: none !important;
-    }
-
-    /* Preserve inline styles from LivePreviewDoc */
-    [data-repeat-header="true"] {
-      outline: none !important;
-    }
-
-    [data-keep-together="true"] {
-      outline: none !important;
-      position: relative;
-    }
-
-    /* Remove the amber keep-together badge in PDF */
-    [data-keep-together="true"] > div[style*="position: absolute"] {
-      display: none !important;
-    }
-
-    @page {
-      size: ${pageSize};
-    }
+    .engine-header-copy { display: none !important; }
+    @page { size: ${pageSize}; }
   </style>
 </head>
 <body>
