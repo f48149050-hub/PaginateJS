@@ -1,9 +1,9 @@
 /**
  * POST /api/generate-pdf
- * Uses Browserless.io hosted Chrome — optimized for Vercel Hobby limits.
+ * Uses Browserless.io hosted Chrome — optimized for Vercel Hobby.
  */
 
-// KORREKT KONFIGURATION FÖR HOBBY: Tillåter upp till 60 sekunder exekveringstid
+// KORREKT KONFIGURATION: Tillåter upp till 60 sekunder på gratisplanen
 export const maxDuration = 60;
 
 interface PageData {
@@ -26,6 +26,7 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
+// NAMNGIVEN EXPORT: Vercel kräver detta för moderna Web-APIer (Ingen export default!)
 export async function POST(req: Request): Promise<Response> {
     const token = process.env.BROWSERLESS_TOKEN;
     if (!token) {
@@ -44,14 +45,14 @@ export async function POST(req: Request): Promise<Response> {
     const { pages, pageSize, marginTop, marginBottom, marginLeft, marginRight } = body;
 
     if (!pages?.length) {
-        return new Response('No pages provided', { status: 400, headers: headers });
+        return new Response('No pages provided', { status: 400, headers: corsHeaders });
     }
 
     const html = buildHtml(pages, pageSize);
 
     try {
         const browserlessRes = await fetch(
-            `https://production-sfo.browserless.io/pdf?token=${token}`,
+            `https://browserless.io{token}`,
             {
                 method: 'POST',
                 headers: {
@@ -63,8 +64,7 @@ export async function POST(req: Request): Promise<Response> {
                     options: {
                         format: pageSize,
                         printBackground: true,
-                        // KORREKT PLACERING OCH VÄRDE: Säger till Browserless att rendera direkt när DOM är redo.
-                        // Detta förhindrar att externa typsnitt/skript orsakar en 504-timeout.
+                        // Snabb rendering direkt när DOM är redo, väntar inte ut nätverket
                         waitUntil: 'domcontentloaded',
                         margin: {
                             top:    `${marginTop}mm`,
@@ -104,6 +104,7 @@ export async function POST(req: Request): Promise<Response> {
     }
 }
 
+// Namngiven export för preflight CORS-anrop
 export async function OPTIONS(): Promise<Response> {
     return new Response(null, { status: 204, headers: corsHeaders });
 }
@@ -122,8 +123,7 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
 <head>
   <meta charset="UTF-8" />
   <style>
-    /* TYPSNITT: Inladdat via @import i CSS vilket fungerar betydligt mer stabilt i Browserless miljöer */
-    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap');
+    @import url('https://googleapis.com');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
