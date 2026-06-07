@@ -51,28 +51,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const browserlessRes = await fetch(
-            `https://browserless.io/pdf?token=${token}`,
+            `https://production-sfo.browserless.io/pdf?token=${token}`,
             {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
-                    'Cache-Control': 'no-cache',
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
                     html,
                     options: {
                         format: pageSize,
                         printBackground: true,
-                        // Säger till Browserless att rendera direkt när DOM är redo (snabbast)
                         waitUntil: 'domcontentloaded',
                         margin: {
-                            top:    `${marginTop}mm`,
                             bottom: `${marginBottom}mm`,
-                            left:   `${marginLeft}mm`,
-                            right:  `${marginRight}mm`,
-                        },
-                    },
-                }),
+                            left: `${marginLeft}mm`,
+                            right: `${marginRight}mm`,
+                        }
+                    }
+                })
             }
         );
 
