@@ -48,6 +48,13 @@ export default async function handler(
 
     console.log('PDF pages:', pages.length);
     console.log(pages[0]);
+
+    console.log(
+        pages.map((p, i) => ({
+            page: i + 1,
+            contentLength: p.contentHtml.length
+        }))
+    );
     const html = buildHtml(pages, pageSize);
 
     try {
