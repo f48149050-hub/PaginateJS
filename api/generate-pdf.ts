@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     try {
         const browserlessRes = await fetch(
-            `https://browserless.io{token}`,
+            `https://browserless.io/pdf?token=${token}`,
             {
                 method: 'POST',
                 headers: {
