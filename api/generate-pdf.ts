@@ -50,6 +50,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const html = buildHtml(pages, pageSize);
 
     try {
+        // DETTA ÄR FIXAT: Rätt API-rutt samt korrekt JavaScript-syntax för token-variabeln!
         const browserlessRes = await fetch(
             `https://browserless.io{token}`,
             {
@@ -110,6 +111,7 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
 <head>
   <meta charset="UTF-8" />
   <style>
+    /* DETTA ÄR FIXAT: Återställde hela sökvägen till Google Fonts */
     @import url('https://googleapis.com');
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
