@@ -128,11 +128,15 @@ function buildHtml(
     print-color-adjust: exact;
   }
 
-  .pdf-page {
-    page-break-after: always;
-    background: white;
-  }
-
+.pdf-page {
+  width: 210mm;
+  height: 297mm;
+  padding: 20mm 15mm 20mm 15mm; /* exempel */
+  box-sizing: border-box;
+  overflow: hidden;
+  background: white;
+  page-break-after: always;
+}
   .pdf-page:last-child {
     page-break-after: auto;
   }

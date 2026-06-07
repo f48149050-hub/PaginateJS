@@ -194,7 +194,13 @@ export const LivePreviewDoc: React.FC<LivePreviewDocProps> = ({
             .filter(b => !b.isRepeatHeaderCopy && b.blockId !== headerBlockId)
             .map(b => blockHtmlMap.get(b.blockId) ?? '')
             .join('');
-        return { headerHtml, contentHtml };
+        console.log(
+            result.pages.map(p => ({
+              blocks: p.blocks.length,
+              height: p.contentHeight
+            }))
+        );
+        return {headerHtml, contentHtml};
       });
 
       const res = await fetch('/api/generate-pdf', {
