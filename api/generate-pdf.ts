@@ -46,6 +46,8 @@ export default async function handler(
         return res.status(400).send('No pages provided');
     }
 
+    console.log('PDF pages:', pages.length);
+    console.log(pages[0]);
     const html = buildHtml(pages, pageSize);
 
     try {
@@ -111,6 +113,11 @@ function buildHtml(
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+
 <style>
   *, *::before, *::after {
     box-sizing: border-box;
@@ -119,7 +126,7 @@ function buildHtml(
   }
 
   body {
-    font-family: sans-serif;
+    font-family: 'DM Sans', sans-serif;
     font-size: 11px;
     line-height: 1.5;
     background: white;
@@ -128,15 +135,14 @@ function buildHtml(
     print-color-adjust: exact;
   }
 
-.pdf-page {
-  width: 210mm;
-  height: 297mm;
-  padding: 20mm 15mm 20mm 15mm; /* exempel */
-  box-sizing: border-box;
-  overflow: hidden;
-  background: white;
-  page-break-after: always;
-}
+  .pdf-page {
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    background: white;
+    page-break-after: always;
+  }
+
   .pdf-page:last-child {
     page-break-after: auto;
   }
@@ -149,6 +155,7 @@ function buildHtml(
 
   @page {
     size: ${pageSize};
+    margin: 0;
   }
 </style>
 </head>
