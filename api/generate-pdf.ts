@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // KORREKT KONFIGURATION FÖR TRADITIONELLA API-RUTTER PÅ HOBBY
 export const config = {
-    maxDuration: 60 // Ger funktionen maximala 60 sekunder på gratisplanen
+    maxDuration: 30 // Ger funktionen maximala 60 sekunder på gratisplanen
 };
 
 interface PageData {
