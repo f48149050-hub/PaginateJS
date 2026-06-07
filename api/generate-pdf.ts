@@ -1,10 +1,10 @@
 /**
  * POST /api/generate-pdf
- * Uses Browserless.io hosted Chrome — no cold start, no timeout.
+ * Uses Browserless.io hosted Chrome — optimized for Vercel Hobby limits.
  */
 
-// KORREKT KONFIGURATION FÖR MODERNA VERCEL FUNCTIONS
-export const maxDuration = 30;
+// KORREKT KONFIGURATION FÖR HOBBY: Tillåter upp till 60 sekunder exekveringstid
+export const maxDuration = 60;
 
 interface PageData {
     headerHtml: string;
@@ -44,7 +44,7 @@ export async function POST(req: Request): Promise<Response> {
     const { pages, pageSize, marginTop, marginBottom, marginLeft, marginRight } = body;
 
     if (!pages?.length) {
-        return new Response('No pages provided', { status: 400, headers: corsHeaders });
+        return new Response('No pages provided', { status: 400, headers: headers });
     }
 
     const html = buildHtml(pages, pageSize);
@@ -60,11 +60,12 @@ export async function POST(req: Request): Promise<Response> {
                 },
                 body: JSON.stringify({
                     html,
-                    // LÄGG TILL DETTA: Säger till browserless hur länge den får köra internt
-                    waitUntil: 'networkidle0',
                     options: {
                         format: pageSize,
                         printBackground: true,
+                        // KORREKT PLACERING OCH VÄRDE: Säger till Browserless att rendera direkt när DOM är redo.
+                        // Detta förhindrar att externa typsnitt/skript orsakar en 504-timeout.
+                        waitUntil: 'domcontentloaded',
                         margin: {
                             top:    `${marginTop}mm`,
                             bottom: `${marginBottom}mm`,
@@ -120,10 +121,10 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <!-- TIPS: Om felet kvarstår efter uppdateringen, kommentera bort raderna nedan för att testa utan externa typsnitt -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
+    /* TYPSNITT: Inladdat via @import i CSS vilket fungerar betydligt mer stabilt i Browserless miljöer */
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap');
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: 'DM Sans', sans-serif;
