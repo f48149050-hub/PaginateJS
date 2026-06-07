@@ -3,7 +3,8 @@
  * Uses Browserless.io hosted Chrome — no cold start, no timeout.
  */
 
-export const config = { maxDuration: 30 };
+// KORREKT KONFIGURATION FÖR MODERNA VERCEL FUNCTIONS
+export const maxDuration = 30;
 
 interface PageData {
     headerHtml: string;
@@ -25,7 +26,6 @@ const corsHeaders = {
     'Access-Control-Allow-Headers': 'Content-Type',
 };
 
-// Named export — this is what Vercel expects for Web fetch-style functions
 export async function POST(req: Request): Promise<Response> {
     const token = process.env.BROWSERLESS_TOKEN;
     if (!token) {
@@ -60,6 +60,8 @@ export async function POST(req: Request): Promise<Response> {
                 },
                 body: JSON.stringify({
                     html,
+                    // LÄGG TILL DETTA: Säger till browserless hur länge den får köra internt
+                    waitUntil: 'networkidle0',
                     options: {
                         format: pageSize,
                         printBackground: true,
@@ -101,7 +103,6 @@ export async function POST(req: Request): Promise<Response> {
     }
 }
 
-// Handle preflight
 export async function OPTIONS(): Promise<Response> {
     return new Response(null, { status: 204, headers: corsHeaders });
 }
@@ -119,6 +120,7 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <!-- TIPS: Om felet kvarstår efter uppdateringen, kommentera bort raderna nedan för att testa utan externa typsnitt -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
