@@ -64,6 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         printBackground: true,
                         waitUntil: 'domcontentloaded',
                         margin: {
+                            top: `${marginTop}mm`,
                             bottom: `${marginBottom}mm`,
                             left: `${marginLeft}mm`,
                             right: `${marginRight}mm`,
