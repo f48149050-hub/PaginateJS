@@ -1,10 +1,9 @@
-/**
- * POST /api/generate-pdf
- * Uses Browserless.io hosted Chrome — optimized for Vercel Hobby.
- */
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// KORREKT KONFIGURATION: Tillåter upp till 60 sekunder på gratisplanen
-export const maxDuration = 60;
+// KORREKT KONFIGURATION FÖR TRADITIONELLA API-RUTTER PÅ HOBBY
+export const config = {
+    maxDuration: 60 // Ger funktionen maximala 60 sekunder på gratisplanen
+};
 
 interface PageData {
     headerHtml: string;
@@ -20,32 +19,32 @@ interface GeneratePDFRequest {
     marginRight: number;
 }
 
-const corsHeaders = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
-};
+// EXPORT DEFAULT: Detta är vad din miljö kräver (löser WARN-meddelandet)
+export default async function handler(req: VercelRequest, res: VercelResponse) {
+    // Hantera CORS-headers manuellt för Node.js-miljön
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-// NAMNGIVEN EXPORT: Vercel kräver detta för moderna Web-APIer (Ingen export default!)
-export async function POST(req: Request): Promise<Response> {
+    // Hantera preflight OPTIONS-anrop direkt
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+
+    // Se till att det är ett POST-anrop
+    if (req.method !== 'POST') {
+        return res.status(405).send('Method Not Allowed');
+    }
+
     const token = process.env.BROWSERLESS_TOKEN;
     if (!token) {
-        return new Response('BROWSERLESS_TOKEN not configured', {
-            status: 500, headers: corsHeaders
-        });
+        return res.status(500).send('BROWSERLESS_TOKEN not configured');
     }
 
-    let body: GeneratePDFRequest;
-    try {
-        body = await req.json();
-    } catch {
-        return new Response('Invalid JSON body', { status: 400, headers: corsHeaders });
-    }
-
-    const { pages, pageSize, marginTop, marginBottom, marginLeft, marginRight } = body;
+    const { pages, pageSize, marginTop, marginBottom, marginLeft, marginRight } = req.body as GeneratePDFRequest;
 
     if (!pages?.length) {
-        return new Response('No pages provided', { status: 400, headers: corsHeaders });
+        return res.status(400).send('No pages provided');
     }
 
     const html = buildHtml(pages, pageSize);
@@ -64,7 +63,7 @@ export async function POST(req: Request): Promise<Response> {
                     options: {
                         format: pageSize,
                         printBackground: true,
-                        // Snabb rendering direkt när DOM är redo, väntar inte ut nätverket
+                        // Säger till Browserless att rendera direkt när DOM är redo (snabbast)
                         waitUntil: 'domcontentloaded',
                         margin: {
                             top:    `${marginTop}mm`,
@@ -80,33 +79,21 @@ export async function POST(req: Request): Promise<Response> {
         if (!browserlessRes.ok) {
             const error = await browserlessRes.text();
             console.error('Browserless error:', error);
-            return new Response(`PDF generation failed: ${error}`, {
-                status: 500, headers: corsHeaders
-            });
+            return res.status(500).send(`PDF generation failed: ${error}`);
         }
 
         const pdfBuffer = await browserlessRes.arrayBuffer();
 
-        return new Response(pdfBuffer, {
-            status: 200,
-            headers: {
-                ...corsHeaders,
-                'Content-Type': 'application/pdf',
-                'Content-Disposition': 'attachment; filename="invoice.pdf"',
-            },
-        });
+        // Skicka tillbaka filen på rätt sätt via Node.js-responsen
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', 'attachment; filename="invoice.pdf"');
+
+        return res.status(200).send(Buffer.from(pdfBuffer));
 
     } catch (err) {
         console.error('PDF generation error:', err);
-        return new Response(`PDF generation failed: ${String(err)}`, {
-            status: 500, headers: corsHeaders,
-        });
+        return res.status(500).send(`PDF generation failed: ${String(err)}`);
     }
-}
-
-// Namngiven export för preflight CORS-anrop
-export async function OPTIONS(): Promise<Response> {
-    return new Response(null, { status: 204, headers: corsHeaders });
 }
 
 function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
