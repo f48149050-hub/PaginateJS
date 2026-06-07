@@ -55,6 +55,15 @@ export default async function handler(
             contentLength: p.contentHtml.length
         }))
     );
+
+    console.log(
+        pages.map((p, i) => ({
+            page: i + 1,
+            headerLength: p.headerHtml.length,
+            contentLength: p.contentHtml.length
+        }))
+    )
+
     const html = buildHtml(pages, pageSize);
 
     try {
@@ -67,6 +76,10 @@ export default async function handler(
                 },
                 body: JSON.stringify({
                     html,
+                    options: {
+                        printBackground: true,
+                        preferCSSPageSize: true
+                    }
                 }),
             }
         );
@@ -142,13 +155,14 @@ function buildHtml(
     print-color-adjust: exact;
   }
 
-  .pdf-page {
-    width: 210mm;
-    height: 297mm;
-    overflow: hidden;
-    background: white;
-    page-break-after: always;
-  }
+.pdf-page {
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  box-sizing: border-box;
+  page-break-after: always;
+  break-after: page;
+}
 
   .pdf-page:last-child {
     page-break-after: auto;
