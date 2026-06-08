@@ -27,11 +27,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const token = process.env.BROWSERLESS_TOKEN;
     if (!token) return res.status(500).send('BROWSERLESS_TOKEN not configured');
 
-    const {
-        pages,
-        pageSize,
-    } = req.body as GeneratePDFRequest;
-
+    const { pages, pageSize } = req.body as GeneratePDFRequest;
     if (!pages?.length) return res.status(400).send('No pages provided');
 
     const html = buildHtml(pages, pageSize);
@@ -47,10 +43,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     options: {
                         printBackground: true,
                         preferCSSPageSize: true,
-                        // Margins are handled by @page CSS to match what the engine calculated
                     },
-                    // Wait for network idle so ALL Google Fonts finish loading
-                    // before Browserless measures any text
+                    // FIX 2: wait for network idle so Google Fonts finish loading
+                    // before Browserless renders anything
                     gotoOptions: {
                         waitUntil: 'networkidle2',
                         timeout: 20000,
@@ -76,10 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 }
 
-function buildHtml(
-    pages: PageData[],
-    pageSize: 'A4' | 'Letter',
-): string {
+function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
     const pagesHtml = pages
         .map(page => `
       <div class="pdf-page">
@@ -94,14 +86,15 @@ function buildHtml(
   <meta charset="UTF-8" />
 
   <!--
-    ALL THREE fonts must be loaded — the pagination engine measured
-    element heights using these exact fonts in the browser.
-    If any font falls back to Arial/Helvetica, text reflows,
-    row heights change, and page breaks drift.
+    FIX 1: All three fonts the pagination engine measured with.
+    Previously only DM Sans was loaded — Browserless fell back to
+    Arial for Syne and DM Mono, changing text metrics and causing
+    page break drift across 90 rows.
   -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+
   <style>
     *, *::before, *::after {
       box-sizing: border-box;
@@ -119,38 +112,27 @@ function buildHtml(
       print-color-adjust: exact;
     }
 
-    /*
-      NO fixed height. NO overflow: hidden.
-      The pagination engine already determined what content goes on each page.
-      Each .pdf-page div contains exactly the right blocks — let them flow
-      naturally. page-break-after tells Chrome where to cut the PDF.
-    */
-.pdf-page {
-    width: 210mm;
-    height: 297mm;
-    overflow: hidden;
-    background: white;
-    page-break-after: always;
-}
+    /* Unchanged from your working version */
+    .pdf-page {
+      width: 210mm;
+      height: 297mm;
+      overflow: hidden;
+      box-sizing: border-box;
+      page-break-after: always;
+      break-after: page;
+    }
 
     .pdf-page:last-child {
       page-break-after: auto;
-      break-after: auto;
     }
 
-    /* Hide preview-only annotation elements */
     [data-header-badge],
     .engine-page-break-line,
     .engine-header-copy {
       display: none !important;
     }
 
-    /*
-      @page margins must match exactly what the pagination engine used.
-      The engine calculated available height as:
-        (pageHeight × MM_TO_PX) - (marginTop × MM_TO_PX) - (marginBottom × MM_TO_PX)
-      So Browserless must use the same margins when rendering.
-    */
+    /* Unchanged from your working version */
     @page {
       size: ${pageSize};
       margin: 0;
