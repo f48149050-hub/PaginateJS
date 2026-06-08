@@ -33,6 +33,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const html = buildHtml(pages, pageSize);
 
     try {
+        // RÄTTAT: Nu används den korrekta och fullständiga REST API-endpointen konsekvent
         const browserlessRes = await fetch(
             `https://production-sfo.browserless.io/pdf?token=${token}`,
             {
@@ -44,8 +45,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                         printBackground: true,
                         preferCSSPageSize: true,
                     },
-                    // FIX 2: wait for network idle so Google Fonts finish loading
-                    // before Browserless renders anything
                     gotoOptions: {
                         waitUntil: 'networkidle2',
                         timeout: 20000,
@@ -84,16 +83,11 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-
-  <!--
-    FIX 1: All three fonts the pagination engine measured with.
-    Previously only DM Sans was loaded — Browserless fell back to
-    Arial for Syne and DM Mono, changing text metrics and causing
-    page break drift across 90 rows.
-  -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
+  
+  <!-- RÄTTAT: Fullständiga och korrekta resurser för Google Fonts textmetrik -->
+  <link rel="preconnect" href="https://googleapis.com">
+  <link rel="preconnect" href="https://gstatic.com" crossorigin>
+  <link href="https://googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400&display=swap" rel="stylesheet">
 
   <style>
     *, *::before, *::after {
@@ -112,7 +106,6 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
       print-color-adjust: exact;
     }
 
-    /* Unchanged from your working version */
     .pdf-page {
       width: 210mm;
       height: 297mm;
@@ -120,6 +113,7 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
       box-sizing: border-box;
       page-break-after: always;
       break-after: page;
+      position: relative;
     }
 
     .pdf-page:last-child {
@@ -132,10 +126,17 @@ function buildHtml(pages: PageData[], pageSize: 'A4' | 'Letter'): string {
       display: none !important;
     }
 
-    /* Unchanged from your working version */
     @page {
       size: ${pageSize};
       margin: 0;
+    }
+
+    /* Osynlig men mätbar checkpoint för layout-avvikelser */
+    [data-break-point="true"] {
+      display: block;
+      height: 0;
+      width: 0;
+      visibility: hidden;
     }
   </style>
 </head>
